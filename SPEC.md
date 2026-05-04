@@ -43,7 +43,7 @@ The first three are the most common, and form the three starting biomes.
 | **Wood** | `#00FFD4` | Movement (tiles per Exterminate phase). |
 | **Water** | `#00D4FF` | Healing up to (Earth + 1). With Wind = 0, only self-heal at amount equal to Water per phase. With Wind ≥ 1, can heal others. |
 | **Fire** | `#FF7F00` | When the unit lands a Metal hit, the target also takes that same Metal damage on its next Exterminate phase, regardless of whether the burner is alive or chooses differently then. |
-| **Ice** | `#D4FF00` | Hit target skips its first chance to act, then resumes normally. |
+| **Ice** | `#0015FF` | Hit target skips its first chance to act, then resumes normally. |
 | **Lightning** | `#FFD400` | On hit (Metal, Water, Ice, or successful Dread), the same effect chains to one new target within Wind range of the previous target. Each Lightning on the user adds one chain. |
 | **Acid** | `#AAFF00` | On hit (Metal, Water, Ice, or successful Dread), the effect splashes to **all** same-side targets within radius equal to the user's Acid score. |
 | **Poison** | `#FF00D4` | Poisoned target takes +1 damage from each subsequent Metal hit for the rest of the current Exterminate phase. |
