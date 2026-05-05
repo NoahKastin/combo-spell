@@ -18,7 +18,7 @@ Design phase. The full design is in [`SPEC.md`](SPEC.md). Code, scenes, and asse
 
 ```
 assets/
-  elements/   12 Element symbol SVGs
+  elements/   12 Element symbol PNGs
   biomes/     biome marker art
   ui/         interface art
 scenes/       Godot scenes (.tscn)
@@ -29,4 +29,4 @@ SPEC.md       canonical design doc
 
 ## License
 
-TBD.
+Licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) (CC BY 4.0). See [`LICENSE`](LICENSE).

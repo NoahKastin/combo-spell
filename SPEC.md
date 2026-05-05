@@ -38,8 +38,8 @@ The first three are the most common, and form the three starting biomes.
 | Element | Hex | Effect |
 |---|---|---|
 | **Earth** | `#000000` | +1 max HP per stack, beyond the default 1. Healing on a damaged unit fills only the new HP point; it does not also restore previously-lost HP. |
-| **Metal** | `#7F7F7F` | Damage on intentional attack (requires Wind ≥ 1) or counter-attack within Wind range − 1. |
-| **Wind** | `#FFFFFF` | Range. Required ≥ 1 to attack intentionally; gates many other Elements. |
+| **Metal** | `#3F3F3F` | Damage on intentional attack (requires Wind ≥ 1) or counter-attack within Wind range − 1. |
+| **Wind** | `#7F7F7F` | Range. Required ≥ 1 to attack intentionally; gates many other Elements. |
 | **Wood** | `#00FFD4` | Movement (tiles per Exterminate phase). |
 | **Water** | `#00D4FF` | Healing up to (Earth + 1). With Wind = 0, only self-heal at amount equal to Water per phase. With Wind ≥ 1, can heal others. |
 | **Fire** | `#FF7F00` | When the unit lands a Metal hit, the target also takes that same Metal damage on its next Exterminate phase, regardless of whether the burner is alive or chooses differently then. |
@@ -133,7 +133,7 @@ iOS: pinch / pull. macOS: scroll wheel. Pan with one-finger drag (iOS) or click-
 - **During Explore**: tappable to expand into the full 12-Element grid; tap collapse glyph (e.g. minus) to return.
 - **During Expand**: grid forced open; crafting button (recycle glyph) appears.
 - **During Exploit**: grid forced open; no extra button.
-- **During Exterminate**: TBD (defer until UI prototype).
+- **During Exterminate**: hidden — keeps players focused on action resolution rather than tweaking loadouts mid-fight.
 - **Long-press** any Element symbol for its definition.
 
 The expanded grid is 3 rows × 4 columns:
@@ -145,6 +145,21 @@ The expanded grid is 3 rows × 4 columns:
 - **Play button**: end the current phase.
 - **Difficulty multiplier**: see §6.
 - **Robot-head button**: open AI / automation dialog for the current phase.
+
+### 5.4 Phase indicator
+
+A persistent text strip at the bottom of the screen names the current phase. Each phase's text is tinted to match a paired Element's color: Explore = Wood (`#00FFD4`), Expand = Water (`#00D4FF`), Exploit = Poison (`#FF00D4`), Exterminate = Fire (`#FF7F00`). The pairing is a color cue, not a gameplay link.
+
+### 5.5 Non-element palette
+
+- **Fog**: `#BFBFBF` (light gray).
+- **Body text and difficulty multiplier**: `#FFFFFF` (white).
+
+The grayscale ramp lands cleanly: Earth (`#000000`) → Metal (`#3F3F3F`) → Wind (`#7F7F7F`) → fog (`#BFBFBF`) → text (`#FFFFFF`).
+
+### 5.6 Typography
+
+Display face: **PajamaPants** (https://www.1001fonts.com/pajamapants-font.html), to echo the visual identity of the original *Combo Spell* TTRPG. License terms to be confirmed before ship-with-app distribution.
 
 ## 6. Difficulty Scaling
 
@@ -191,6 +206,8 @@ Local heuristic macros, deterministic, ships in the binary:
 - "target lowest-HP enemies"
 - crafting automation while crafting mode is active
 - replay fast-forward toggle
+
+**Boundary scoping**: any macro above can be optionally constrained to a player-drawn region of tiles. The player paints a set of tiles before issuing a command; the macro acts only within those bounds. This extends the deterministic-macro toolkit to cover scenarios that would otherwise drift toward natural-language input — e.g. *harvest all Lightning nodes more than 3 tiles from the Heart* becomes *paint the tiles outside the inner 3-tile ring, then run "harvest all of one Element first."*
 
 LLM upgrade is **deferred**. Only consider if natural-language commands feel necessary in playtesting. On-device (Apple Intelligence, MLX) preferred over cloud.
 
