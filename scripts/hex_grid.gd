@@ -6,7 +6,6 @@ extends RefCounted
 # Storage convention: Vector2i(q, r); third cube coord s = -q - r is derived.
 # Reference: https://www.redblobgames.com/grids/hexagons/
 #
-# TODO: port HexLayout (pixel <-> hex conversion) when rendering work begins.
 # TODO: port HexPathfinder (A*) when enemy movement is implemented.
 
 const DIRECTIONS: Array[Vector2i] = [

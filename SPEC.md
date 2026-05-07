@@ -124,7 +124,13 @@ Anywhere "drag-and-drop" is used: tap-to-pick-up (the picked Element enlarges), 
 iOS: pinch / pull. macOS: scroll wheel. Pan with one-finger drag (iOS) or click-drag (macOS).
 
 - **Max zoom in**: every Element used in the tile is shown with a count near each symbol. The most-heavily-used Element (or earliest-added in a tie) sits at center; other Elements arrange in concentric rings of `6 × 2^n`, sorted by usage count, then by earliest player addition within each tier.
-- **Max zoom out**: each tile shows only its outline color (green/red/blue), the primary Element symbol, and possibly its count.
+- **Mid zoom (default play view)**: primary Element symbol at tile center with its count; up to N secondary Elements as smaller satellites adjacent to the primary, sorted by usage count then earliest player addition. Tiles with more than `N + 1` distinct Elements show `+M` (M = count of hidden Elements) to prompt zoom-in. Cap N is TBD via playtesting; placeholder `N = 2`.
+- **Max zoom out**: each tile shows only its outline color, the primary Element symbol, and possibly its count.
+
+**Tile outline = role tag** (intentionally desaturated so role and Element palettes never collide):
+- Enemy tile: `#E63946`
+- Friendly-unit tile: `#2ECC71`
+- Resource-node tile: `#3498DB`
 
 ### 5.3 Camera-bump notches
 
