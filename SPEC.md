@@ -79,7 +79,7 @@ Kept here for posterity in case they return: Armor, Chill (frozen-but-not-skippe
 Players see a set of fog-shrouded big-hex candidates adjacent to (often partially overlapping) already-revealed big-hexes. Tap one to remove fog from those 7 tiles.
 
 - **Game start**: 3 candidates, each containing the Heart at one of its corners (bottom, top-right, top-left). The biome marker for these three is randomly assigned from {Earth, Metal, Wind}, one each, distinct.
-- **Subsequent Explore rounds**: 6 candidates per round, adjacent to the most-recently-revealed big-hex.
+- **Subsequent Explore rounds**: each reveal adds up to 6 new candidates at the big-hex-lattice neighbors of the just-revealed cluster. Unrevealed candidates from earlier rounds remain available — players can return to options they passed over, even if revealing one now produces a cluster that partially overlaps an already-revealed big-hex. Candidates whose center would sit inside an already-revealed cluster are pruned: partial overlap is fine, but a big-hex nested entirely inside another is never offered.
 - **Biome markers** are small visible features protruding above the fog, signaling the most-likely Element for that big-hex. Markers stay visible after the fog is lifted, as a reminder of local Element bias.
 - **Resource seeding**: total Elements in resource nodes within a newly-revealed big-hex equals `2 × difficulty multiplier` at time of reveal. The biome's Element is guaranteed to appear at least once.
 - **Enemy seeding**: total Elements across enemies within a newly-revealed big-hex is up to `2 × difficulty multiplier`. The biome's Element is highly likely (but not guaranteed) on enemies. Enemies do not spawn adjacent to the Heart.
