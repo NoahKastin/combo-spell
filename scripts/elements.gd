@@ -19,6 +19,21 @@ enum Type {
 	SHADOW,
 }
 
+const NAME := {
+	Type.EARTH: "Earth",
+	Type.METAL: "Metal",
+	Type.WIND: "Wind",
+	Type.WOOD: "Wood",
+	Type.WATER: "Water",
+	Type.FIRE: "Fire",
+	Type.ICE: "Ice",
+	Type.LIGHTNING: "Lightning",
+	Type.ACID: "Acid",
+	Type.POISON: "Poison",
+	Type.DREAD: "Dread",
+	Type.SHADOW: "Shadow",
+}
+
 const COLOR := {
 	Type.EARTH: Color("#000000"),
 	Type.METAL: Color("#3F3F3F"),

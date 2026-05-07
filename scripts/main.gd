@@ -67,9 +67,11 @@ var candidates: Array[BigHex] = []
 var revealed_big_hexes: Array[BigHex] = []
 var revealed_tiles: Dictionary = {} # Vector2i -> true
 var tiles: Dictionary = {}          # Vector2i -> Tile (occupied tiles only)
+var harvested_this_phase: int = 0
 
 @onready var phase_label: Label = $UI/PhaseLabel
 @onready var next_phase_button: Button = $UI/NextPhaseButton
+@onready var wallet_label: Label = $UI/WalletLabel
 @onready var camera: Camera2D = $Camera2D
 
 
@@ -80,8 +82,10 @@ func _ready() -> void:
 	heart.position = layout.hex_to_screen(Vector2i.ZERO)
 	add_child(heart)
 	Game.phase_changed.connect(_on_phase_changed)
+	Game.wallet_changed.connect(_refresh_wallet_label)
 	next_phase_button.pressed.connect(_on_next_phase_pressed)
 	_refresh_phase_ui()
+	_refresh_wallet_label()
 
 
 func _seed_starting_candidates() -> void:
@@ -177,19 +181,23 @@ static func _stacked_tile_count(elements: int) -> int:
 func _seed_resources(coords: Array[Vector2i], element_count: int, biome: int) -> void:
 	if coords.is_empty() or element_count == 0:
 		return
-	# §4.1: biome is guaranteed at least once. Place it on coords[0], whose
-	# position is random because the coord list was shuffled upstream.
-	var first := Tile.new(coords[0], Tile.Kind.RESOURCE)
-	first.add_element(biome)
-	tiles[first.coord] = first
-	# Remaining Elements scatter across the chosen resource tiles, stacking
-	# wherever they happen to land.
-	for i in range(1, element_count):
-		var c: Vector2i = coords.pick_random()
-		if not tiles.has(c):
-			tiles[c] = Tile.new(c, Tile.Kind.RESOURCE)
-		var t: Tile = tiles[c]
-		t.add_element(MVP_BIOMES.pick_random())
+	# §4.1: each resource tile holds a single Element type. Tile coords[0]
+	# carries the biome (guaranteed); other tiles each get a random MVP type.
+	# Element scatter then stacks each tile's predetermined type, never
+	# mixing types on a single resource tile.
+	var types: Array[int] = [biome]
+	for _i in range(1, coords.size()):
+		types.append(MVP_BIOMES.pick_random())
+	tiles[coords[0]] = Tile.new(coords[0], Tile.Kind.RESOURCE)
+	tiles[coords[0]].add_element(biome)
+	for _i in range(1, element_count):
+		var idx: int = randi() % coords.size()
+		var c: Vector2i = coords[idx]
+		var t: Tile = tiles.get(c)
+		if t == null:
+			t = Tile.new(c, Tile.Kind.RESOURCE)
+			tiles[c] = t
+		t.add_element(types[idx])
 
 
 func _seed_enemies(coords: Array[Vector2i], element_count: int, biome: int) -> void:
@@ -326,8 +334,6 @@ func _visible_hexes() -> Array[Vector2i]:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if Game.phase != Phase.Type.EXPLORE:
-		return
 	var world_pos: Vector2
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		world_pos = get_global_mouse_position()
@@ -335,7 +341,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		world_pos = get_canvas_transform().affine_inverse() * event.position
 	else:
 		return
-	_try_reveal_at(world_pos)
+	match Game.phase:
+		Phase.Type.EXPLORE:
+			_try_reveal_at(world_pos)
+		Phase.Type.EXPLOIT:
+			_try_harvest_at(world_pos)
 
 
 func _try_reveal_at(world_pos: Vector2) -> void:
@@ -357,6 +367,33 @@ func _try_reveal_at(world_pos: Vector2) -> void:
 	# clean pick.
 
 
+# §4.3: Exploit harvests Elements from resource tiles. Tap a resource → 1
+# of its primary Element moves into Game.wallet, capped at `multiplier` per
+# phase. Tap-and-hold and AI macros are MVP TODOs.
+func _try_harvest_at(world_pos: Vector2) -> void:
+	if harvested_this_phase >= Game.difficulty_multiplier():
+		return
+	var hex := layout.screen_to_hex(world_pos)
+	var tile: Tile = tiles.get(hex)
+	if tile == null or tile.kind != Tile.Kind.RESOURCE:
+		return
+	_harvest_one(tile)
+
+
+func _harvest_one(tile: Tile) -> void:
+	var primary := tile.primary_element()
+	if primary < 0:
+		return
+	tile.composition[primary] -= 1
+	if tile.composition[primary] <= 0:
+		tile.composition.erase(primary)
+	if tile.composition.is_empty():
+		tiles.erase(tile.coord)
+	harvested_this_phase += 1
+	Game.add_to_wallet(primary, 1)
+	queue_redraw()
+
+
 func _reveal(big_hex: BigHex) -> void:
 	big_hex.revealed = true
 	revealed_big_hexes.append(big_hex)
@@ -374,7 +411,9 @@ func _on_next_phase_pressed() -> void:
 	Game.advance_phase()
 
 
-func _on_phase_changed(_new_phase: int) -> void:
+func _on_phase_changed(new_phase: int) -> void:
+	if new_phase == Phase.Type.EXPLOIT:
+		harvested_this_phase = 0
 	_refresh_phase_ui()
 
 
@@ -385,3 +424,12 @@ func _refresh_phase_ui() -> void:
 	# Force a deliberate candidate pick during Explore. The button stays
 	# enabled in other phases as a phase-skip helper.
 	next_phase_button.disabled = (p == Phase.Type.EXPLORE) and not candidates.is_empty()
+
+
+func _refresh_wallet_label() -> void:
+	var lines: Array[String] = []
+	for kind in MVP_BIOMES:
+		var n: int = Game.wallet.get(kind, 0)
+		var line: String = "%s: %d" % [Element.NAME[kind], n]
+		lines.append(line)
+	wallet_label.text = "\n".join(lines)
