@@ -13,6 +13,19 @@ var phase: int = Phase.Type.EXPLORE
 var cycles_completed: int = 0
 var wallet: Dictionary = {} # Element.Type -> int
 
+# §4.2: a fresh game seeds the wallet with one of each starting biome
+# Element so the very first Expand has options before the first harvest.
+const STARTING_WALLET: Dictionary = {
+	Element.Type.EARTH: 1,
+	Element.Type.METAL: 1,
+	Element.Type.WIND: 1,
+}
+
+
+func _ready() -> void:
+	for elem in STARTING_WALLET:
+		wallet[elem] = STARTING_WALLET[elem]
+
 
 # §6: difficulty_multiplier = floor(cycles_completed / 3) + 1
 func difficulty_multiplier() -> int:

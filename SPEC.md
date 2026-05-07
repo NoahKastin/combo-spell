@@ -90,6 +90,7 @@ Players see a set of fog-shrouded big-hex candidates adjacent to (often partiall
 
 Place or augment units. No combat occurs.
 
+- **Starting wallet**: at game start the wallet holds 1 Earth, 1 Metal, 1 Wind — one of each starting biome — so the very first Expand has options before any harvest.
 - **Place a unit**: drag-and-drop an Element from the camera-bump grid onto an empty non-fogged tile. The new unit has 1 max HP plus whatever the dropped Element confers (so Earth → 2 max HP, Wood → 1 HP / 1 movement).
 - **Augment a unit**: drag an Element onto an existing unit to add that property; stacks linearly.
 - **Health rule**: dropping Earth on a damaged unit raises max HP and fills only the new point. Previously-lost HP is not restored.
@@ -234,7 +235,6 @@ A vertical slice that exercises all four phases minimally:
 - Camera-bump UI behavior during Exterminate phase.
 - Music & SFX direction (deferred until core loop is fun).
 - Tutorial / first-run UX (the random Earth/Metal/Wind starting biomes give a natural drip; full tutorial design TBD).
-- Starting wallet endowment (the wallet is empty at game start, so the very first Expand has nothing to place. Not a difficulty issue — cycle-1 enemies can't roll Wood and so can't reach the Heart before the player gets one harvest in — but a strategic-flexibility gap. Possible fixes: grant one Element of the first revealed biome, or one random MVP Element at game start).
 
 ## 12. Attribution
 

@@ -26,6 +26,11 @@ const ELEMENT_GRID_LAYOUT: Array[int] = [
 	Element.Type.WIND, Element.Type.ICE, Element.Type.LIGHTNING, Element.Type.ACID,
 ]
 const PICKED_TINT := Color(1.4, 1.4, 0.7)
+const CRAFTING_TINT := Color(1.0, 0.8, 1.4)
+
+# §4.2: crafting trades 2 of the dragged Element for 1 of the dropped Element.
+const CRAFT_COST := 2
+const CRAFT_YIELD := 1
 
 # §5.2 mid-zoom: primary symbol at center, up to N=2 smaller satellites
 # adjacent. Hex-corner positions at 240° (upper-left) and 300° (upper-right),
@@ -96,12 +101,14 @@ var revealed_tiles: Dictionary = {} # Vector2i -> true
 var tiles: Dictionary = {}          # Vector2i -> Tile (occupied tiles only)
 var harvested_this_phase: int = 0
 var picked_element: int = -1        # -1 = nothing picked up; otherwise Element.Type
+var crafting_mode: bool = false
 var element_buttons: Dictionary = {}      # Element.Type -> TextureButton
 var element_count_labels: Dictionary = {} # Element.Type -> Label
 
 @onready var phase_label: Label = $UI/PhaseLabel
 @onready var next_phase_button: Button = $UI/NextPhaseButton
 @onready var element_grid: Control = $UI/ElementGrid
+@onready var recycle_button: Button = $UI/RecycleButton
 @onready var camera: Camera2D = $Camera2D
 
 
@@ -115,6 +122,7 @@ func _ready() -> void:
 	Game.phase_changed.connect(_on_phase_changed)
 	Game.wallet_changed.connect(_refresh_wallet_display)
 	next_phase_button.pressed.connect(_on_next_phase_pressed)
+	recycle_button.pressed.connect(_on_recycle_pressed)
 	_refresh_phase_ui()
 	_refresh_wallet_display()
 
@@ -439,7 +447,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		Phase.Type.EXPLORE:
 			_try_reveal_at(world_pos)
 		Phase.Type.EXPAND:
-			_try_place_or_augment_at(world_pos)
+			# §4.2: while crafting mode is on, the only valid drop targets
+			# are other grid Elements. Tile drops are gated off so the
+			# player can't accidentally place a unit mid-craft.
+			if not crafting_mode:
+				_try_place_or_augment_at(world_pos)
 		Phase.Type.EXPLOIT:
 			_try_harvest_at(world_pos)
 
@@ -498,18 +510,38 @@ func _try_place_or_augment_at(world_pos: Vector2) -> void:
 func _on_element_picked(elem: int) -> void:
 	if Game.phase != Phase.Type.EXPAND:
 		return
-	if Game.wallet.get(elem, 0) <= 0:
-		return
 	if picked_element == elem:
 		_clear_picked()
 		return
+	if crafting_mode and picked_element >= 0:
+		# Source already in hand: drop onto a different grid Element.
+		_try_craft(picked_element, elem)
+		return
+	var min_required: int = CRAFT_COST if crafting_mode else 1
+	if Game.wallet.get(elem, 0) < min_required:
+		return
 	picked_element = elem
 	_refresh_picked_visual()
+	_refresh_wallet_display()
+
+
+# §4.2: crafting spends 2 of `source` and yields 1 of `target`. Wallet must
+# already hold the cost; pickup gating in _on_element_picked enforces this,
+# but we re-check here in case the source count changed between pickup and
+# drop (e.g., a future action consumes Elements without clearing the pick).
+func _try_craft(source: int, target: int) -> void:
+	if Game.wallet.get(source, 0) < CRAFT_COST:
+		_clear_picked()
+		return
+	Game.add_to_wallet(source, -CRAFT_COST)
+	Game.add_to_wallet(target, CRAFT_YIELD)
+	_clear_picked()
 
 
 func _clear_picked() -> void:
 	picked_element = -1
 	_refresh_picked_visual()
+	_refresh_wallet_display()
 
 
 func _refresh_picked_visual() -> void:
@@ -562,10 +594,25 @@ func _on_next_phase_pressed() -> void:
 	Game.advance_phase()
 
 
+func _on_recycle_pressed() -> void:
+	if Game.phase != Phase.Type.EXPAND:
+		return
+	crafting_mode = not crafting_mode
+	_clear_picked()
+	_refresh_recycle_visual()
+	_refresh_wallet_display()
+
+
+func _refresh_recycle_visual() -> void:
+	recycle_button.modulate = CRAFTING_TINT if crafting_mode else Color.WHITE
+
+
 func _on_phase_changed(new_phase: int) -> void:
 	if new_phase == Phase.Type.EXPLOIT:
 		harvested_this_phase = 0
+	crafting_mode = false
 	_clear_picked()
+	_refresh_recycle_visual()
 	_refresh_phase_ui()
 	_refresh_wallet_display()
 
@@ -577,16 +624,24 @@ func _refresh_phase_ui() -> void:
 	# Force a deliberate candidate pick during Explore. The button stays
 	# enabled in other phases as a phase-skip helper.
 	next_phase_button.disabled = (p == Phase.Type.EXPLORE) and not candidates.is_empty()
+	# §5.3: the crafting (recycle) button only appears during Expand.
+	recycle_button.visible = p == Phase.Type.EXPAND
 
 
 # Updates each grid slot's count label and disables buttons whose Element
-# isn't pickable right now (zero in the wallet, or any phase other than
-# Expand). Called on launch, on wallet changes, and on phase changes.
+# isn't pickable right now. Outside Expand: nothing is pickable. In Expand
+# without crafting: need wallet ≥ 1 to pick up a placement. In Expand with
+# crafting: pre-pickup needs wallet ≥ 2 (only valid sources are pickable);
+# post-pickup all 12 buttons stay live so any can be a drop target or the
+# source itself can be re-tapped to cancel.
 func _refresh_wallet_display() -> void:
 	var pickable_phase: bool = Game.phase == Phase.Type.EXPAND
+	var has_pickup: bool = picked_element >= 0
+	var min_required: int = CRAFT_COST if crafting_mode else 1
 	for elem in element_buttons:
 		var n: int = Game.wallet.get(elem, 0)
 		var lbl: Label = element_count_labels[elem]
 		lbl.text = str(n)
 		var btn: TextureButton = element_buttons[elem]
-		btn.disabled = n <= 0 or not pickable_phase
+		var enabled: bool = pickable_phase and (has_pickup or n >= min_required)
+		btn.disabled = not enabled
