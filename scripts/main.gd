@@ -14,6 +14,33 @@ const PERIMETER_WIDTH := 6.0
 const FOG_FILL := Color("#BFBFBF")
 const REVEALED_FILL := Color("#FFFFFF")
 
+# §5.3 expanded grid: 3 rows × 4 columns with this exact ordering. Buttons
+# whose wallet count is 0 stay disabled; tapping a button picks up that
+# Element for placement during Expand.
+const GRID_ICON_SIZE := 100.0
+const GRID_SPACING := 20.0
+const GRID_COUNT_FONT_SIZE := 32
+const ELEMENT_GRID_LAYOUT: Array[int] = [
+	Element.Type.EARTH, Element.Type.WOOD, Element.Type.WATER, Element.Type.SHADOW,
+	Element.Type.METAL, Element.Type.FIRE, Element.Type.POISON, Element.Type.DREAD,
+	Element.Type.WIND, Element.Type.ICE, Element.Type.LIGHTNING, Element.Type.ACID,
+]
+const PICKED_TINT := Color(1.4, 1.4, 0.7)
+
+# §5.2 mid-zoom: primary symbol at center, up to N=2 smaller satellites
+# adjacent. Hex-corner positions at 240° (upper-left) and 300° (upper-right),
+# at radius 50 from the tile center; each satellite icon is half the primary
+# size. Beyond N+1 distinct types, an "+M" badge nudges the player to zoom in.
+const MAX_VISIBLE_SECONDARIES := 2
+const SATELLITE_ICON_SIZE := 50.0
+const SATELLITE_OFFSETS: Array[Vector2] = [
+	Vector2(25, -43),    # ring 1, 300° (upper-right)
+	Vector2(-25, -43),   # ring 1, 240° (upper-left)
+]
+const SATELLITE_COUNT_FONT_SIZE := 28
+const OVERFLOW_FONT_SIZE := 32
+const OVERFLOW_BADGE_OFFSET := Vector2(0, 50)
+
 # §4.1: of an enemy's biome ≈ "highly likely but not guaranteed." Per-enemy
 # probability of getting the biome's Element vs a uniform MVP draw.
 const ENEMY_BIOME_BIAS := 0.7
@@ -68,10 +95,13 @@ var revealed_big_hexes: Array[BigHex] = []
 var revealed_tiles: Dictionary = {} # Vector2i -> true
 var tiles: Dictionary = {}          # Vector2i -> Tile (occupied tiles only)
 var harvested_this_phase: int = 0
+var picked_element: int = -1        # -1 = nothing picked up; otherwise Element.Type
+var element_buttons: Dictionary = {}      # Element.Type -> TextureButton
+var element_count_labels: Dictionary = {} # Element.Type -> Label
 
 @onready var phase_label: Label = $UI/PhaseLabel
 @onready var next_phase_button: Button = $UI/NextPhaseButton
-@onready var wallet_label: Label = $UI/WalletLabel
+@onready var element_grid: Control = $UI/ElementGrid
 @onready var camera: Camera2D = $Camera2D
 
 
@@ -81,11 +111,47 @@ func _ready() -> void:
 	heart.texture = load("res://assets/heart.png")
 	heart.position = layout.hex_to_screen(Vector2i.ZERO)
 	add_child(heart)
+	_build_element_grid()
 	Game.phase_changed.connect(_on_phase_changed)
-	Game.wallet_changed.connect(_refresh_wallet_label)
+	Game.wallet_changed.connect(_refresh_wallet_display)
 	next_phase_button.pressed.connect(_on_next_phase_pressed)
 	_refresh_phase_ui()
-	_refresh_wallet_label()
+	_refresh_wallet_display()
+
+
+func _build_element_grid() -> void:
+	for i in ELEMENT_GRID_LAYOUT.size():
+		var elem: int = ELEMENT_GRID_LAYOUT[i]
+		var row: int = i / 4
+		var col: int = i % 4
+		var slot_pos := Vector2(col * (GRID_ICON_SIZE + GRID_SPACING), row * (GRID_ICON_SIZE + GRID_SPACING))
+		var btn := TextureButton.new()
+		# ignore_texture_size and stretch_mode go before texture_normal —
+		# otherwise the button auto-sizes to the (large) PNG before we can
+		# tell it not to.
+		btn.ignore_texture_size = true
+		btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		btn.texture_normal = Element.ICON[elem]
+		btn.position = slot_pos
+		btn.custom_minimum_size = Vector2(GRID_ICON_SIZE, GRID_ICON_SIZE)
+		btn.size = Vector2(GRID_ICON_SIZE, GRID_ICON_SIZE)
+		btn.pivot_offset = Vector2(GRID_ICON_SIZE, GRID_ICON_SIZE) * 0.5
+		btn.pressed.connect(_on_element_picked.bind(elem))
+		element_grid.add_child(btn)
+		element_buttons[elem] = btn
+
+		var lbl := Label.new()
+		lbl.text = "0"
+		lbl.add_theme_font_size_override("font_size", GRID_COUNT_FONT_SIZE)
+		lbl.add_theme_color_override("font_outline_color", Color.WHITE)
+		lbl.add_theme_constant_override("outline_size", 4)
+		lbl.size = Vector2(GRID_ICON_SIZE, GRID_COUNT_FONT_SIZE + 8)
+		lbl.position = Vector2(0, GRID_ICON_SIZE - GRID_COUNT_FONT_SIZE - 6)
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		btn.add_child(lbl)
+		element_count_labels[elem] = lbl
 
 
 func _seed_starting_candidates() -> void:
@@ -281,27 +347,55 @@ func _draw_biome_marker(big_hex: BigHex) -> void:
 
 
 func _draw_element_icon(tile: Tile) -> void:
-	var primary := tile.primary_element()
-	if primary < 0:
+	var sorted := _sorted_composition(tile)
+	if sorted.is_empty():
 		return
-	var icon: Texture2D = Element.ICON[primary]
-	var size := Vector2.ONE * TILE_ICON_SIZE
 	var tile_center := layout.hex_to_screen(tile.coord)
-	draw_texture_rect(icon, Rect2(tile_center - size * 0.5, size), false)
-	var count: int = tile.composition[primary]
-	if count > 1:
-		_draw_tile_count(tile_center, count)
+
+	var primary: int = sorted[0]
+	_draw_icon_at(Element.ICON[primary], tile_center, TILE_ICON_SIZE)
+	var primary_count: int = tile.composition[primary]
+	if primary_count > 1:
+		_draw_count_at(tile_center, str(primary_count), COUNT_FONT_SIZE)
+
+	var visible_secondaries: int = min(MAX_VISIBLE_SECONDARIES, sorted.size() - 1)
+	for i in visible_secondaries:
+		var elem: int = sorted[1 + i]
+		var sat_pos: Vector2 = tile_center + SATELLITE_OFFSETS[i]
+		_draw_icon_at(Element.ICON[elem], sat_pos, SATELLITE_ICON_SIZE)
+		var sat_count: int = tile.composition[elem]
+		if sat_count > 1:
+			_draw_count_at(sat_pos, str(sat_count), SATELLITE_COUNT_FONT_SIZE)
+
+	var hidden: int = sorted.size() - 1 - visible_secondaries
+	if hidden > 0:
+		_draw_count_at(tile_center + OVERFLOW_BADGE_OFFSET, "+" + str(hidden), OVERFLOW_FONT_SIZE)
 
 
-func _draw_tile_count(at: Vector2, count: int) -> void:
+# Composition keys sorted by count (descending). MVP has no insertion-order
+# tracking yet, so ties resolve by Dictionary iteration order (which is
+# insertion order in GDScript) — matches the §5.2 "earliest player addition"
+# tiebreaker for tiles built up by augment actions.
+func _sorted_composition(tile: Tile) -> Array[int]:
+	var keys := tile.composition.keys()
+	keys.sort_custom(func(a, b): return tile.composition[a] > tile.composition[b])
+	var result: Array[int] = []
+	for k in keys:
+		result.append(k)
+	return result
+
+
+func _draw_icon_at(icon: Texture2D, center: Vector2, sz: float) -> void:
+	var box := Vector2.ONE * sz
+	draw_texture_rect(icon, Rect2(center - box * 0.5, box), false)
+
+
+func _draw_count_at(at: Vector2, text: String, font_size: int) -> void:
 	var font: Font = ThemeDB.fallback_font
-	var text := str(count)
-	var box_width := TILE_ICON_SIZE * 1.5
-	# draw_string anchors at the baseline; nudge down so the glyph sits near
-	# the tile's vertical center.
-	var pos := Vector2(at.x - box_width * 0.5, at.y + COUNT_FONT_SIZE * 0.35)
-	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_CENTER, box_width, COUNT_FONT_SIZE, COUNT_OUTLINE_WIDTH, Color.WHITE)
-	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_CENTER, box_width, COUNT_FONT_SIZE, Color.BLACK)
+	var box_width: float = TILE_ICON_SIZE * 1.5
+	var pos := Vector2(at.x - box_width * 0.5, at.y + font_size * 0.35)
+	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_CENTER, box_width, font_size, COUNT_OUTLINE_WIDTH, Color.WHITE)
+	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_CENTER, box_width, font_size, Color.BLACK)
 
 
 # All hex coords whose centers fall within the viewport, padded by 1 to cover
@@ -344,6 +438,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	match Game.phase:
 		Phase.Type.EXPLORE:
 			_try_reveal_at(world_pos)
+		Phase.Type.EXPAND:
+			_try_place_or_augment_at(world_pos)
 		Phase.Type.EXPLOIT:
 			_try_harvest_at(world_pos)
 
@@ -365,6 +461,61 @@ func _try_reveal_at(world_pos: Vector2) -> void:
 		_reveal(matches[0])
 	# Else (0 or >1 matches): no-op. Player taps closer to a marker for a
 	# clean pick.
+
+
+# §4.2: Expand places a unit (drop on empty revealed tile) or augments an
+# existing unit (drop on a Kind.UNIT tile) by spending 1 of the picked
+# Element from the wallet. Heart, fog, resource, and enemy tiles refuse
+# the drop. The drag-and-drop equivalent (§5.1) is "tap to pick up, tap a
+# tile to drop" — pickup happens via the ElementGrid buttons.
+func _try_place_or_augment_at(world_pos: Vector2) -> void:
+	if picked_element < 0:
+		return
+	if Game.wallet.get(picked_element, 0) <= 0:
+		_clear_picked()
+		return
+	var hex := layout.screen_to_hex(world_pos)
+	if hex == Vector2i.ZERO:
+		return
+	if not revealed_tiles.has(hex):
+		return
+	var existing: Tile = tiles.get(hex)
+	if existing == null:
+		var unit := Tile.new(hex, Tile.Kind.UNIT)
+		unit.add_element(picked_element)
+		tiles[hex] = unit
+	elif existing.kind == Tile.Kind.UNIT:
+		existing.add_element(picked_element)
+	else:
+		# Resource or enemy — placement refused.
+		return
+	Game.add_to_wallet(picked_element, -1)
+	queue_redraw()
+	if Game.wallet.get(picked_element, 0) <= 0:
+		_clear_picked()
+
+
+func _on_element_picked(elem: int) -> void:
+	if Game.phase != Phase.Type.EXPAND:
+		return
+	if Game.wallet.get(elem, 0) <= 0:
+		return
+	if picked_element == elem:
+		_clear_picked()
+		return
+	picked_element = elem
+	_refresh_picked_visual()
+
+
+func _clear_picked() -> void:
+	picked_element = -1
+	_refresh_picked_visual()
+
+
+func _refresh_picked_visual() -> void:
+	for elem in element_buttons:
+		var btn: TextureButton = element_buttons[elem]
+		btn.modulate = PICKED_TINT if elem == picked_element else Color.WHITE
 
 
 # §4.3: Exploit harvests Elements from resource tiles. Tap a resource → 1
@@ -414,7 +565,9 @@ func _on_next_phase_pressed() -> void:
 func _on_phase_changed(new_phase: int) -> void:
 	if new_phase == Phase.Type.EXPLOIT:
 		harvested_this_phase = 0
+	_clear_picked()
 	_refresh_phase_ui()
+	_refresh_wallet_display()
 
 
 func _refresh_phase_ui() -> void:
@@ -426,10 +579,14 @@ func _refresh_phase_ui() -> void:
 	next_phase_button.disabled = (p == Phase.Type.EXPLORE) and not candidates.is_empty()
 
 
-func _refresh_wallet_label() -> void:
-	var lines: Array[String] = []
-	for kind in MVP_BIOMES:
-		var n: int = Game.wallet.get(kind, 0)
-		var line: String = "%s: %d" % [Element.NAME[kind], n]
-		lines.append(line)
-	wallet_label.text = "\n".join(lines)
+# Updates each grid slot's count label and disables buttons whose Element
+# isn't pickable right now (zero in the wallet, or any phase other than
+# Expand). Called on launch, on wallet changes, and on phase changes.
+func _refresh_wallet_display() -> void:
+	var pickable_phase: bool = Game.phase == Phase.Type.EXPAND
+	for elem in element_buttons:
+		var n: int = Game.wallet.get(elem, 0)
+		var lbl: Label = element_count_labels[elem]
+		lbl.text = str(n)
+		var btn: TextureButton = element_buttons[elem]
+		btn.disabled = n <= 0 or not pickable_phase
