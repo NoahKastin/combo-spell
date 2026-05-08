@@ -12,4 +12,4 @@
   - [x] Expand: place / augment units, crafting (recycle), starting wallet endowment. Earth's "fills only the new HP point" rule deferred until combat exists.
   - [x] Exploit: tap to harvest, per-phase budget.
   - [ ] Exterminate: unit half + enemy half, combat resolution, enemy pathing.
-- [ ] Raid the *Diablo IV: Lord of Hatred* skill trees for enemy (later AI-assisted player unit) behavior ideas, to inform post-slice enemy variety. Rough notes go in `docs/`.
+- [x] Raid the *Diablo IV: Lord of Hatred* skill trees for enemy (later AI-assisted player unit) behavior ideas, to inform post-slice enemy variety. Notes in `docs/behaviors.md`.

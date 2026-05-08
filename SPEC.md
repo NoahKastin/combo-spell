@@ -138,7 +138,7 @@ iOS: pinch / pull. macOS: scroll wheel. Pan with one-finger drag (iOS) or click-
 **Left notch — Element UI**:
 - **Default state**: top three player-owned Elements with single-digit count (`?` if > 9).
 - **During Explore**: tappable to expand into the full 12-Element grid; tap collapse glyph (e.g. minus) to return.
-- **During Expand**: grid forced open; crafting button (recycle glyph) appears.
+- **During Expand**: grid forced open; crafting button (recycle glyph) appears in the camera-bump slot otherwise occupied by the top-3 default.
 - **During Exploit**: grid forced open; no extra button.
 - **During Exterminate**: hidden — keeps players focused on action resolution rather than tweaking loadouts mid-fight.
 - **Long-press** any Element symbol for its definition.
