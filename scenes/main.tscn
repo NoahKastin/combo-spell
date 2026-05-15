@@ -33,6 +33,19 @@ offset_bottom = 140.0
 theme_override_font_sizes/font_size = 64
 text = ">"
 
+[node name="MultiplierLabel" type="Label" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 160.0
+offset_right = -40.0
+offset_bottom = 260.0
+theme_override_font_sizes/font_size = 64
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="ElementGrid" type="Control" parent="UI"]
 layout_mode = 3
 anchors_preset = 0
@@ -48,3 +61,54 @@ offset_right = 140.0
 offset_bottom = 520.0
 theme_override_font_sizes/font_size = 64
 text = "♻"
+
+[node name="GameOverPanel" type="Panel" parent="UI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -400.0
+offset_right = 500.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="UI/GameOverPanel"]
+layout_mode = 0
+anchor_right = 1.0
+offset_top = 80.0
+offset_bottom = 250.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 128
+text = "Game Over"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="UI/GameOverPanel"]
+modulate = Color(1, 0, 0.333333, 1)
+layout_mode = 0
+anchor_right = 1.0
+offset_top = 290.0
+offset_bottom = 410.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 80
+text = "Heart Touched"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayAgainButton" type="Button" parent="UI/GameOverPanel"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -250.0
+offset_top = -200.0
+offset_right = 250.0
+offset_bottom = -80.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 64
+text = "Play Again"

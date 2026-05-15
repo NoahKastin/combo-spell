@@ -38,7 +38,7 @@ The first three are the most common, and form the three starting biomes.
 | Element | Hex | Effect |
 |---|---|---|
 | **Earth** | `#000000` | +1 max HP per stack, beyond the default 1. Healing on a damaged unit fills only the new HP point; it does not also restore previously-lost HP. |
-| **Metal** | `#3F3F3F` | Damage on intentional attack (requires Wind ≥ 1) or counter-attack within Wind range − 1. |
+| **Metal** | `#3F3F3F` | Damage on intentional attack (requires Wind ≥ 1) or counter-attack within Wind range + 1 — so even a 0-Wind unit counters at adjacent / melee range. Counter is passive (fires automatically when struck) and does not consume the defender's action; counters don't chain. |
 | **Wind** | `#7F7F7F` | Range. Required ≥ 1 to attack intentionally; gates many other Elements. |
 | **Wood** | `#00FFD4` | Movement (tiles per Exterminate phase). |
 | **Water** | `#00D4FF` | Healing up to (Earth + 1). With Wind = 0, only self-heal at amount equal to Water per phase. With Wind ≥ 1, can heal others. |
@@ -82,6 +82,7 @@ Players see a set of fog-shrouded big-hex candidates adjacent to (often partiall
 - **Subsequent Explore rounds**: each reveal adds up to 6 new candidates at the big-hex-lattice neighbors of the just-revealed cluster. Unrevealed candidates from earlier rounds remain available — players can return to options they passed over, even if revealing one now produces a cluster that partially overlaps an already-revealed big-hex. Candidates whose center would sit inside an already-revealed cluster are pruned: partial overlap is fine, but a big-hex nested entirely inside another is never offered.
 - **Biome markers** are small visible features protruding above the fog, signaling the most-likely Element for that big-hex. Markers stay visible after the fog is lifted, as a reminder of local Element bias.
 - **Resource seeding**: total Elements in resource nodes within a newly-revealed big-hex equals `2 × difficulty multiplier` at time of reveal. The biome's Element is guaranteed to appear at least once. Each resource tile holds a single Element type — multiple stacks of that one type are fine, but mixed-type tiles are reserved for enemies.
+- **Subsumed-candidate bonus**: if revealing the chosen big-hex prunes one or more previously-offered candidates (because their centers now sit entirely inside revealed territory — e.g. a Wood candidate sandwiched between the chosen Metal hex and an already-revealed hex), each pruned candidate's biome Element is added as a guaranteed node in the chosen big-hex, drawn from the same `2 × difficulty multiplier` budget alongside the obligatory chosen-biome node. Priority when the budget is tight: chosen biome first, then pruned biomes in the order they were originally offered, then the usual biased random fill.
 - **Enemy seeding**: total Elements across enemies within a newly-revealed big-hex is up to `2 × difficulty multiplier`. The biome's Element is highly likely (but not guaranteed) on enemies. Enemies do not spawn adjacent to the Heart.
 - Resource nodes and enemies cannot share tiles.
 - During non-Explore phases, only non-fogged tiles are interactable. Camera panning is bounded so players cannot wander far past revealed territory.
@@ -102,6 +103,7 @@ Harvest Elements from resource nodes. The player can harvest up to `difficulty m
 
 - **Tap** an Element symbol on a tile to harvest 1.
 - **Tap-and-hold** to harvest as many as possible from that symbol in one action, capped by the per-phase budget.
+- **Budget counter**: a visible counter shows nodes-remaining-this-phase out of the per-phase budget — `multiplier/multiplier` at the start of Exploit, decrementing with each harvest down to `0/multiplier`. UI placement in §5.3.
 - **AI automation**: pattern-driven harvesting — "all of one Element first," "everything in this region," "earliest-spawned first," etc.
 
 ### 4.4 Exterminate
@@ -150,7 +152,7 @@ The expanded grid is 3 rows × 4 columns:
 
 **Right notch** (right-to-left):
 - **Play button**: end the current phase.
-- **Difficulty multiplier**: see §6.
+- **Difficulty multiplier**: see §6. **During Exploit**, this slot shows the harvest-budget counter `remaining/multiplier` instead of the bare multiplier (§4.3); the denominator is still the multiplier, so no information is lost.
 - **Robot-head button**: open AI / automation dialog for the current phase.
 
 ### 5.4 Phase indicator

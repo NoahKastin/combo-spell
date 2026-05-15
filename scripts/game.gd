@@ -23,6 +23,16 @@ const STARTING_WALLET: Dictionary = {
 
 
 func _ready() -> void:
+	reset_for_new_game()
+
+
+# Restores the autoload to its game-start state. Used both at app launch and
+# when the player taps "Play Again" after a Heart breach. Direct field writes
+# (no signals) — the freshly reloaded scene reads state in its own `_ready`.
+func reset_for_new_game() -> void:
+	phase = Phase.Type.EXPLORE
+	cycles_completed = 0
+	wallet.clear()
 	for elem in STARTING_WALLET:
 		wallet[elem] = STARTING_WALLET[elem]
 
