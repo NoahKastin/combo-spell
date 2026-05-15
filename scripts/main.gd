@@ -14,16 +14,25 @@ const PERIMETER_WIDTH := 6.0
 const FOG_FILL := Color("#BFBFBF")
 const REVEALED_FILL := Color("#FFFFFF")
 
-# §5.3 expanded grid: 3 rows × 4 columns with this exact ordering. Buttons
-# whose wallet count is 0 stay disabled; tapping a button picks up that
-# Element for placement during Expand.
+# §5.3 expanded grid. Buttons whose wallet count is 0 stay disabled; tapping
+# a button picks up that Element for placement during Expand.
+#
+# ITCH.IO TRIM: this release ships only the four MVP-active Elements as a
+# single column (Wood below Wind). To restore the full 3×4 grid for the next
+# version, revert GRID_COLS to 4, restore the 12-Element layout below, and
+# in scenes/main.tscn move RecycleButton back to offset_top=420 / offset_bottom=520:
+#   Element.Type.EARTH, Element.Type.WOOD, Element.Type.WATER, Element.Type.SHADOW,
+#   Element.Type.METAL, Element.Type.FIRE, Element.Type.POISON, Element.Type.DREAD,
+#   Element.Type.WIND,  Element.Type.ICE,  Element.Type.LIGHTNING, Element.Type.ACID,
 const GRID_ICON_SIZE := 100.0
 const GRID_SPACING := 20.0
 const GRID_COUNT_FONT_SIZE := 32
+const GRID_COLS := 1
 const ELEMENT_GRID_LAYOUT: Array[int] = [
-	Element.Type.EARTH, Element.Type.WOOD, Element.Type.WATER, Element.Type.SHADOW,
-	Element.Type.METAL, Element.Type.FIRE, Element.Type.POISON, Element.Type.DREAD,
-	Element.Type.WIND, Element.Type.ICE, Element.Type.LIGHTNING, Element.Type.ACID,
+	Element.Type.EARTH,
+	Element.Type.METAL,
+	Element.Type.WIND,
+	Element.Type.WOOD,
 ]
 const PICKED_TINT := Color(1.4, 1.4, 0.7)
 const CRAFTING_TINT := Color(1.0, 0.8, 1.4)
@@ -173,8 +182,8 @@ func _ready() -> void:
 func _build_element_grid() -> void:
 	for i in ELEMENT_GRID_LAYOUT.size():
 		var elem: int = ELEMENT_GRID_LAYOUT[i]
-		var row: int = i / 4
-		var col: int = i % 4
+		var row: int = i / GRID_COLS
+		var col: int = i % GRID_COLS
 		var slot_pos := Vector2(col * (GRID_ICON_SIZE + GRID_SPACING), row * (GRID_ICON_SIZE + GRID_SPACING))
 		var btn := TextureButton.new()
 		# ignore_texture_size and stretch_mode go before texture_normal —

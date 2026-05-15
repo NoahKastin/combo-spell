@@ -56,9 +56,9 @@ offset_bottom = 400.0
 
 [node name="RecycleButton" type="Button" parent="UI"]
 offset_left = 40.0
-offset_top = 420.0
+offset_top = 520.0
 offset_right = 140.0
-offset_bottom = 520.0
+offset_bottom = 620.0
 theme_override_font_sizes/font_size = 64
 text = "♻"
 
