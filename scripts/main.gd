@@ -546,13 +546,9 @@ func _visible_hexes() -> Array[Vector2i]:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	var world_pos: Vector2
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		world_pos = get_global_mouse_position()
-	elif event is InputEventScreenTouch and event.pressed:
-		world_pos = get_canvas_transform().affine_inverse() * event.position
-	else:
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
 		return
+	var world_pos: Vector2 = get_global_mouse_position()
 	if game_over:
 		return
 	match Game.phase:
@@ -779,11 +775,7 @@ func _refresh_phase_ui() -> void:
 		next_phase_button.disabled = true
 	else:
 		next_phase_button.disabled = false
-	# §5.3: the crafting (recycle) button only appears during Expand. The full
-	# Element grid is hidden during Exterminate so the player focuses on action
-	# resolution rather than loadout tweaks.
 	recycle_button.visible = p == Phase.Type.EXPAND
-	element_grid.visible = p != Phase.Type.EXTERMINATE
 
 
 # §5.3: the right-notch multiplier slot doubles as the Exploit harvest-budget
